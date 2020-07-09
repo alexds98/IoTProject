@@ -4,8 +4,12 @@
 import streams
 import adc
 import pwm
+import timers
 
 streams.serial()
+
+PASSWORD = "abba"
+entered = ""
 
 # set alarm led for digital write
 alarm_led_pin = D23
@@ -28,9 +32,18 @@ pinMode(phr_pin, INPUT_ANALOG)
 dark_led_pin = D21
 pinMode(dark_led_pin, OUTPUT)
 
-# set board button as pullup input
+# set board button as input with pullup built-in resistor
 dark_btn_pin = BTN0
 pinMode(dark_btn_pin, INPUT_PULLUP)
+
+pass_btn1 = D19
+pinMode(pass_btn1, INPUT_PULLDOWN)
+
+pass_btn2 = D18
+pinMode(pass_btn2, INPUT_PULLDOWN)
+
+confirm_btn = D5
+pinMode(confirm_btn, INPUT_PULLDOWN)
 
 def toggle_dark_mode() :
     global dark_mode
@@ -56,11 +69,11 @@ def blink_times(pin) :
     return (time_on, time_off)
         
 def pot_led_thread(led_pin, pot_pin) :
-    global stop
+    global alarm
     while True :
         time_on, time_off = blink_times(pot_pin)
         blink(led_pin, time_on, time_off)
-        if stop :
+        if not alarm :
             break
         
 def buzzer_alarm(pwm_pin) :
@@ -68,8 +81,9 @@ def buzzer_alarm(pwm_pin) :
     VARIATION = 39
     frequency = INITIAL_FREQUENCY
     mode = 1
-    global stop
+    global alarm
     while True :
+        # print(frequency)
         period = 1000000//frequency
         pwm.write(pwm_pin, period, period//2, MICROS)
         if mode == 1 :
@@ -80,7 +94,8 @@ def buzzer_alarm(pwm_pin) :
             mode = 1
         elif frequency > INITIAL_FREQUENCY + VARIATION :
             mode = 0
-        if stop :
+        if not alarm :
+            pwm.write(pwm_pin, 0, 0)
             break
         sleep(25)
         
@@ -98,11 +113,48 @@ def light_in_dark(phr_pin, led_pin) :
         else :
             digitalWrite(led_pin, LOW)
             sleep(500)
+            
+def update_entered(button_number) :
+    global entered
+    global alarm
+    print("button ", button_number, " pressed")
+    if alarm :
+        if button_number == 1 :
+            entered += "a"
+        elif button_number == 2 :
+            entered += "b"
+        
+def clear_entered() :
+    global entered
+    entered = ""
+
+def check_password() :
+    global entered
+    global PASSWORD
+    global alarm
+    print("confirm button pressed")
+    if alarm :
+        if entered == PASSWORD :
+            print("Correct password, stopping alarm")
+            stop_alarm()
+        else :
+            clear_entered()
+            print("Incorrect password")
+        
+def stop_alarm() :
+    global alarm
+    alarm = False
+    clear_entered()
 
 # on button pressed i activate/deactivate dark mode
 onPinFall(dark_btn_pin, toggle_dark_mode)
 
-stop = False
+# handling password buttons
+onPinFall(pass_btn1, update_entered, 1)
+onPinFall(pass_btn2, update_entered, 2)
+onPinFall(confirm_btn, check_password)
+
+alarm = True
 dark_mode = True
 thread(pot_led_thread, alarm_led_pin, pot_pin)
 thread(buzzer_alarm, buzzer_pwm_pin)
