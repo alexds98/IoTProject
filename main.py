@@ -28,6 +28,15 @@ pinMode(phr_pin, INPUT_ANALOG)
 dark_led_pin = D21
 pinMode(dark_led_pin, OUTPUT)
 
+# set board button as pullup input
+dark_btn_pin = BTN0
+pinMode(dark_btn_pin, INPUT_PULLUP)
+
+def toggle_dark_mode() :
+    global dark_mode
+    # print("Toggle")
+    dark_mode = not dark_mode
+
 def blink(pin, time_on, time_off) :
         digitalWrite(pin,HIGH)   # turn the led ON by making the voltage HIGH
         sleep(time_on)           # wait for time_on 
@@ -76,16 +85,25 @@ def buzzer_alarm(pwm_pin) :
         sleep(25)
         
 def light_in_dark(phr_pin, led_pin) :
+    global dark_mode
     while True :
-        phr_value = adc.read(phr_pin)
-        # print(phr_value)
-        if phr_value < 1500 :
-            digitalWrite(led_pin, HIGH)
+        if dark_mode :
+            phr_value = adc.read(phr_pin)
+            # print(phr_value)
+            if phr_value < 1500 :
+                digitalWrite(led_pin, HIGH)
+            else :
+                digitalWrite(led_pin, LOW)
+            sleep(500)
         else :
             digitalWrite(led_pin, LOW)
-        sleep(500)
-        
+            sleep(500)
+
+# on button pressed i activate/deactivate dark mode
+onPinFall(dark_btn_pin, toggle_dark_mode)
+
 stop = False
-# thread(pot_led_thread, alarm_led_pin, pot_pin)
-# thread(buzzer_alarm, buzzer_pwm_pin)
+dark_mode = True
+thread(pot_led_thread, alarm_led_pin, pot_pin)
+thread(buzzer_alarm, buzzer_pwm_pin)
 thread(light_in_dark, phr_pin, dark_led_pin)
