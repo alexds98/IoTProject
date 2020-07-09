@@ -4,7 +4,7 @@
 import streams
 import adc
 import pwm
-import timers
+import hcsr04
 
 streams.serial()
 
@@ -36,14 +36,25 @@ pinMode(dark_led_pin, OUTPUT)
 dark_btn_pin = BTN0
 pinMode(dark_btn_pin, INPUT_PULLUP)
 
+# set button 1 as input with pulldown built-in resistor
 pass_btn1 = D19
 pinMode(pass_btn1, INPUT_PULLDOWN)
 
+# set button 2 as input with pulldown built-in resistor
 pass_btn2 = D18
 pinMode(pass_btn2, INPUT_PULLDOWN)
 
+# set button 3 as input with pulldown built-in resistor
 confirm_btn = D5
 pinMode(confirm_btn, INPUT_PULLDOWN)
+
+# set trigger pin for hcsr04 as digital output
+trigger_pin = D17
+pinMode(trigger_pin, OUTPUT)
+
+# set echo pin for hcsr04 as digital input
+echo_pin = D16
+pinMode(echo_pin, INPUT)
 
 def toggle_dark_mode() :
     global dark_mode
@@ -58,7 +69,7 @@ def blink(pin, time_on, time_off) :
         
 def blink_times(pin) :
     pot_value = adc.read(pin)
-    # print(pot_value)
+    # print("pot_value: ", pot_value)
     time_on = 500
     if pot_value < 2047 :
         time_on -= (2047 - pot_value) // 5
@@ -83,7 +94,7 @@ def buzzer_alarm(pwm_pin) :
     mode = 1
     global alarm
     while True :
-        # print(frequency)
+        # print("frequency: ", frequency)
         period = 1000000//frequency
         pwm.write(pwm_pin, period, period//2, MICROS)
         if mode == 1 :
@@ -104,7 +115,7 @@ def light_in_dark(phr_pin, led_pin) :
     while True :
         if dark_mode :
             phr_value = adc.read(phr_pin)
-            # print(phr_value)
+            # print("phr_value: ", phr_value)
             if phr_value < 1500 :
                 digitalWrite(led_pin, HIGH)
             else :
@@ -145,6 +156,13 @@ def stop_alarm() :
     global alarm
     alarm = False
     clear_entered()
+    
+def start_alarm() :
+    global alarm
+    alarm = True
+    thread(pot_led_thread, alarm_led_pin, pot_pin)
+    thread(buzzer_alarm, buzzer_pwm_pin)
+    thread(light_in_dark, phr_pin, dark_led_pin)
 
 # on button pressed i activate/deactivate dark mode
 onPinFall(dark_btn_pin, toggle_dark_mode)
@@ -154,8 +172,14 @@ onPinFall(pass_btn1, update_entered, 1)
 onPinFall(pass_btn2, update_entered, 2)
 onPinFall(confirm_btn, check_password)
 
-alarm = True
+alarm = False
 dark_mode = True
 thread(pot_led_thread, alarm_led_pin, pot_pin)
 thread(buzzer_alarm, buzzer_pwm_pin)
 thread(light_in_dark, phr_pin, dark_led_pin)
+while True :
+    distance = hcsr04.calculate_distance(trigger_pin, echo_pin)
+    print(distance)
+    if distance > 0.0 and not alarm:
+        start_alarm()
+    sleep(1000)    
