@@ -1,4 +1,2 @@
-IoTProject-antitheft
-====================
-
-[Project description goes here]
+# IoTProject
+Antitheft system
