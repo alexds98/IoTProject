@@ -20,6 +20,14 @@ buzzer_pin = D22
 buzzer_pwm_pin = D22.PWM
 pinMode(buzzer_pin, OUTPUT)
 
+# set photoresistor for analog read
+phr_pin = A7
+pinMode(phr_pin, INPUT_ANALOG)
+
+# set dark led for digital write
+dark_led_pin = D21
+pinMode(dark_led_pin, OUTPUT)
+
 def blink(pin, time_on, time_off) :
         digitalWrite(pin,HIGH)   # turn the led ON by making the voltage HIGH
         sleep(time_on)           # wait for time_on 
@@ -67,6 +75,17 @@ def buzzer_alarm(pwm_pin) :
             break
         sleep(25)
         
+def light_in_dark(phr_pin, led_pin) :
+    while True :
+        phr_value = adc.read(phr_pin)
+        # print(phr_value)
+        if phr_value < 1500 :
+            digitalWrite(led_pin, HIGH)
+        else :
+            digitalWrite(led_pin, LOW)
+        sleep(500)
+        
 stop = False
-thread(pot_led_thread, alarm_led_pin, pot_pin)
-thread(buzzer_alarm, buzzer_pwm_pin)
+# thread(pot_led_thread, alarm_led_pin, pot_pin)
+# thread(buzzer_alarm, buzzer_pwm_pin)
+thread(light_in_dark, phr_pin, dark_led_pin)
