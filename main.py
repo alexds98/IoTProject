@@ -5,11 +5,15 @@ import streams
 import adc
 import pwm
 import hcsr04
+import lcd2004_I2C
+import math
 
 streams.serial()
 
 PASSWORD = "abba"
 entered = ""
+
+display = lcd2004_I2C.lcd(I2C0)
 
 # set alarm led for digital write
 alarm_led_pin = D23
@@ -162,8 +166,7 @@ def start_alarm() :
     alarm = True
     thread(pot_led_thread, alarm_led_pin, pot_pin)
     thread(buzzer_alarm, buzzer_pwm_pin)
-    thread(light_in_dark, phr_pin, dark_led_pin)
-
+    
 # on button pressed i activate/deactivate dark mode
 onPinFall(dark_btn_pin, toggle_dark_mode)
 
@@ -174,12 +177,19 @@ onPinFall(confirm_btn, check_password)
 
 alarm = False
 dark_mode = True
-thread(pot_led_thread, alarm_led_pin, pot_pin)
-thread(buzzer_alarm, buzzer_pwm_pin)
 thread(light_in_dark, phr_pin, dark_led_pin)
+line = 1
 while True :
-    distance = hcsr04.calculate_distance(trigger_pin, echo_pin)
-    print(distance)
-    if distance > 0.0 and not alarm:
-        start_alarm()
-    sleep(1000)    
+    if not alarm : 
+        distance = hcsr04.calculate_distance(trigger_pin, echo_pin)
+        display.lcd_display_string_pos(str(math.floor(distance)) + " cm", 1, 6)
+        if distance > 0.0 :
+            start_alarm()
+        sleep(1000)
+        display.lcd_clear()
+    else :
+        display.lcd_display_string_pos("Alarm!", line, 7)
+        sleep(1000)
+        display.lcd_clear()
+        line = (line % 4) + 1
+      
