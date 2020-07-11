@@ -1,13 +1,26 @@
 import tkinter as tk
 import paho.mqtt.client as mqtt
+import requests
 
 window = tk.Tk()
 window.geometry("300x100")
 window.title("IoT Antitheft")
 window.resizable(False, False)
 
+alarm_active = False
+
 ALARM_DEACTIVATED_TEXT = "Your home is safe"
 ALARM_ACTIVATED_TEXT = "Alarm!"
+
+def telegram_bot_sendtext(bot_message):
+    
+    bot_token = '1314702041:AAF1qPCpHxAH4lNGYbL-ODFJOcDXLm-g8sY'
+    bot_chatID = '826477974'
+    send_text = 'https://api.telegram.org/bot' + bot_token + '/sendMessage?chat_id=' + bot_chatID + '&parse_mode=Markdown&text=' + bot_message
+
+    response = requests.get(send_text)
+
+    return response.json()
 
 def place_label(label, short=False):
     if short:
@@ -25,6 +38,9 @@ def change_label_color(label, color):
     label['fg'] = color
 
 def activate_alarm():
+    global alarm_active
+    alarm_active = True
+    telegram_bot_sendtext("L'allarme è stato attivato!")
     change_label_text(alarm_label, ALARM_ACTIVATED_TEXT), 
     change_label_color(alarm_label, "red"), 
     place_label(alarm_label, True), 
@@ -32,6 +48,9 @@ def activate_alarm():
     deactivate_alarm_button.place(relx=0.35, rely=0.5)
 
 def deactivate_alarm():
+    global alarm_active
+    alarm_active = False
+    telegram_bot_sendtext("Hai disattivato l'allarme")
     change_label_text(alarm_label, ALARM_DEACTIVATED_TEXT), 
     change_label_color(alarm_label, "green"), 
     place_label(alarm_label), 
@@ -48,15 +67,16 @@ deactivate_alarm_button = tk.Button(text="Deactivate alarm", command=lambda: [de
 
 def on_message(client, userdata, message):
     msg = str(message.payload.decode("utf-8"))
-    if msg == "Alarm is active":
+    print("receving ", msg)
+    if msg == "Alarm is active" and not alarm_active:
         activate_alarm()
-    elif msg == "Alarm is deactive":
+    elif msg == "Alarm is deactive" and alarm_active:
         deactivate_alarm()
 
 def publish_activated():
     if client.is_connected:
         try:
-            client.publish("alex/alarm_command", "Activate alarm", 1)
+            client.publish("alex/alarm_command", "Activate alarm", 1, retain=True)
             print("publishing 'Activate alarm' on alex/alarm_command")
         except Exception as e:
             print(e)
@@ -64,7 +84,7 @@ def publish_activated():
 def publish_deactivated():
     if client.is_connected:
         try:
-            client.publish("alex/alarm_command", "Deactivate alarm", 1)
+            client.publish("alex/alarm_command", "Deactivate alarm", 1, retain=True)
             print("publishing 'Deactivate alarm' on alex/alarm_command")
         except Exception as e:
             print(e)

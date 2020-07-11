@@ -193,7 +193,7 @@ def publish_alarm_state():
         else:
             message = "Alarm is deactive"
         try:
-            client.publish("alex/alarm_state", message, qos=1)
+            client.publish("alex/alarm_state", message, qos=1, retain=True)
             print("Published alarm state: ", message)
         except Exception as e:
             print('Publish alarm state failed for message: ', message, e)
@@ -224,7 +224,7 @@ try:
             display.lcd_display_string_pos(str(math.floor(distance)) + " cm", 1, 6)
             if distance > 0.0 :
                 num_debug +=1
-            elif distance == 0.0:
+            elif distance <= 0.0:
                 num_debug = 0
             if num_debug > 1:
                 start_alarm()
