@@ -7,6 +7,7 @@ import pwm
 import hcsr04
 import lcd2004_I2C
 import math
+import internet
 
 streams.serial()
 
@@ -160,12 +161,14 @@ def stop_alarm() :
     global alarm
     alarm = False
     clear_entered()
+    publish_alarm_state()
     
 def start_alarm() :
     global alarm
     alarm = True
     thread(pot_led_thread, alarm_led_pin, pot_pin)
     thread(buzzer_alarm, buzzer_pwm_pin)
+    publish_alarm_state() 
     
 # on button pressed i activate/deactivate dark mode
 onPinFall(dark_btn_pin, toggle_dark_mode)
@@ -179,17 +182,59 @@ alarm = False
 dark_mode = True
 thread(light_in_dark, phr_pin, dark_led_pin)
 line = 1
-while True :
-    if not alarm : 
-        distance = hcsr04.calculate_distance(trigger_pin, echo_pin)
-        display.lcd_display_string_pos(str(math.floor(distance)) + " cm", 1, 6)
-        if distance > 0.0 :
-            start_alarm()
-        sleep(1000)
-        display.lcd_clear()
-    else :
-        display.lcd_display_string_pos("Alarm!", line, 7)
-        sleep(1000)
-        display.lcd_clear()
-        line = (line % 4) + 1
-      
+num_debug = 0
+######################################################
+
+def publish_alarm_state():
+    global alarm
+    if client.connected():
+        if alarm:
+            message = "Alarm is active"
+        else:
+            message = "Alarm is deactive"
+        try:
+            client.publish("alex/alarm_state", message, qos=1)
+            print("Published alarm state: ", message)
+        except Exception as e:
+            print('Publish alarm state failed for message: ', message, e)
+            
+def on_alarm_message(mqtt_client, payload, topic):
+    if payload == "Activate alarm":
+        start_alarm()
+    elif payload == "Deactivate alarm":
+        stop_alarm()
+    
+internet.connect()
+            
+# Inizializzo il client MQTT
+client = internet.Client("zerynth-mqtt-alex")
+    
+# subscribe to channels
+def aconnect_cb():
+    print("connected.")
+    client.subscribe("alex/alarm_command", on_alarm_message, 1)
+
+try:
+    client.connect("test.mosquitto.org", aconnect_cb=aconnect_cb)
+    
+    print("Starting loop")
+    while True :
+        if not alarm : 
+            distance = hcsr04.calculate_distance(trigger_pin, echo_pin)
+            display.lcd_display_string_pos(str(math.floor(distance)) + " cm", 1, 6)
+            if distance > 0.0 :
+                num_debug +=1
+            elif distance == 0.0:
+                num_debug = 0
+            if num_debug > 1:
+                start_alarm()
+                num_debug = 0
+            sleep(1000)
+            display.lcd_clear()
+        else :
+            display.lcd_display_string_pos("Alarm!", line, 7)
+            sleep(1000)
+            display.lcd_clear()
+            line = (line % 4) + 1
+except Exception as e:
+    print(e)
