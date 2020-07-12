@@ -1,9 +1,9 @@
 from lwmqtt import mqtt
 from wireless import wifi
-import env
+import config
 
-SSID = env.SSID
-PASSWORD = env.PASSWORD
+SSID = config.SSID
+PASSWORD = config.PASSWORD
 
 def connect():
     from espressif.esp32net import esp32wifi as wifi_driver
