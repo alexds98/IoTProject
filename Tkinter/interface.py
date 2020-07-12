@@ -1,7 +1,6 @@
 import tkinter as tk
 import paho.mqtt.client as mqtt
 import requests
-import config
 
 window = tk.Tk()
 window.geometry("300x100")
@@ -14,8 +13,8 @@ ALARM_DEACTIVATED_TEXT = "Your home is safe"
 ALARM_ACTIVATED_TEXT = "Alarm!"
 
 def telegram_bot_sendtext(bot_message):
-    bot_token = config.BOT_TOKEN
-    bot_chatID = config.BOT_CHATID
+    bot_token = '1314702041:AAF1qPCpHxAH4lNGYbL-ODFJOcDXLm-g8sY'
+    bot_chatID = '826477974'
     send_text = 'https://api.telegram.org/bot' + bot_token + '/sendMessage?chat_id=' + bot_chatID + '&parse_mode=Markdown&text=' + bot_message
 
     response = requests.get(send_text)
