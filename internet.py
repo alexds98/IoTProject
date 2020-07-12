@@ -1,8 +1,9 @@
 from lwmqtt import mqtt
 from wireless import wifi
+import env
 
-SSID = "FASTWEB-77EF88"
-PASSWORD = "98KZ76HAYT"
+SSID = env.SSID
+PASSWORD = env.PASSWORD
 
 def connect():
     from espressif.esp32net import esp32wifi as wifi_driver
